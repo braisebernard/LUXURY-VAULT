@@ -336,9 +336,9 @@ $image = !empty($row['image'])
 ?>
 
 </div>
-
 <div class="footer">
-    © 2026 LuxuryVault. All rights reserved.
+    © 2026 LuxuryVault |
+    <a href="contact.php">Contact Us</a>
 </div>
 
 </body>

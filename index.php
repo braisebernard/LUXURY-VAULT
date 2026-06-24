@@ -220,7 +220,8 @@ Shop Collection
 </div>
 
 <div class="footer">
-© 2026 LuxuryVault
+    © 2026 LuxuryVault |
+    <a href="contact.php">Contact Us</a>
 </div>
 
 </body>
