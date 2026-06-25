@@ -8,19 +8,45 @@ if(isset($_POST['addProduct'])){
     $category = $_POST['category'];
     $price = $_POST['price'];
     $description = $_POST['description'];
-    $image = $_POST['image'];
 
-    $sql = "INSERT INTO products(name,category,price,description,image)
-            VALUES('$name','$category','$price','$description','$image')";
+    // IMAGE UPLOAD
+    $imageName = $_FILES['image']['name'];
+    $tmpName = $_FILES['image']['tmp_name'];
+
+    // Move image to images folder
+    move_uploaded_file(
+        $tmpName,
+        "images/".$imageName
+    );
+
+    $sql = "INSERT INTO products
+    (name,category,price,description,image)
+
+    VALUES
+
+    ('$name','$category','$price',
+    '$description','$imageName')";
 
     if(mysqli_query($conn,$sql)){
-        echo "<script>alert('Product Added Successfully');</script>";
+
+        echo "
+        <script>
+        alert('Product Added Successfully');
+        window.location='manage_products.php';
+        </script>
+        ";
+
     }else{
-        echo "<script>alert('Failed To Add Product');</script>";
+
+        echo "
+        <script>
+        alert('Failed To Add Product');
+        </script>
+        ";
+
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -141,7 +167,7 @@ background:#d4af37;
 
 <div class="form-box">
 
-<form method="POST">
+<form method="POST" enctype="multipart/form-data">
 
 <input type="text"
 name="name"
@@ -158,10 +184,14 @@ name="price"
 placeholder="Price"
 required>
 
-<input type="text"
+<label>Product Image</label>
+
+<input
+type="file"
 name="image"
-placeholder="Image Filename (example rolex.jpg)"
+accept="image/*"
 required>
+
 
 <textarea
 name="description"
