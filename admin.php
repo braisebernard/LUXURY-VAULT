@@ -1,6 +1,6 @@
 <?php
-session_start();
 include("connect.php");
+include("admin_auth.php");
 
 $totalProducts = mysqli_num_rows(
 mysqli_query($conn,"SELECT * FROM products"));

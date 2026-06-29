@@ -1,6 +1,6 @@
 <?php
-session_start();
 include("connect.php");
+include("admin_auth.php");
 
 if(isset($_POST['addProduct'])){
 
@@ -10,8 +10,31 @@ if(isset($_POST['addProduct'])){
     $description = $_POST['description'];
 
     // IMAGE UPLOAD
-    $imageName = $_FILES['image']['name'];
+   $imageName = $_FILES['image']['name'];
     $tmpName = $_FILES['image']['tmp_name'];
+
+    $extension = strtolower(
+    pathinfo($imageName, PATHINFO_EXTENSION));
+
+    $allowed = [
+    "jpg",
+    "jpeg",
+    "png",
+    "webp"
+    ];
+
+    if(!in_array($extension,$allowed)){
+
+    die("Invalid Image Type.");
+
+}
+
+    $imageName = uniqid().".".$extension;
+
+    move_uploaded_file(
+    $tmpName,
+    "images/".$imageName
+);
 
     // Move image to images folder
     move_uploaded_file(

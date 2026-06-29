@@ -1,6 +1,6 @@
 <?php
-session_start();
 include("connect.php");
+include("admin_auth.php");
 
 $query = mysqli_query($conn,
 "SELECT * FROM users");

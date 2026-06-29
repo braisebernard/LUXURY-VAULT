@@ -1,92 +1,117 @@
 <?php
+session_set_cookie_params([
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
 
 session_start();
 include("connect.php");
 
-
-// ================= REGISTER =================
+/* ==========================================
+   USER REGISTRATION
+========================================== */
 
 if(isset($_POST['signUp'])){
 
-    $firstName = $_POST['fName'];
-    $lastName  = $_POST['lName'];
-    $email     = $_POST['email'];
+    $firstName = trim($_POST['fName']);
+    $lastName  = trim($_POST['lName']);
+    $email     = strtolower(trim($_POST['email']));
     $password  = $_POST['password'];
 
-    // CHECK EXISTING EMAIL
-    $checkEmail = mysqli_query($conn,
-    "SELECT * FROM users WHERE email='$email'");
+    // Check if email already exists
+    $stmt = $conn->prepare("SELECT id FROM users WHERE email=?");
+    $stmt->bind_param("s",$email);
+    $stmt->execute();
+    $result = $stmt->get_result();
 
-   if(mysqli_num_rows($checkEmail) > 0){
+    if($result->num_rows > 0){
 
-    echo "
-    <script>
+        echo "<script>
         alert('Email already exists');
-        window.location.href='register.php';
-    </script>
-    ";
+        window.location='login.php';
+        </script>";
+        exit();
 
-    exit();
-}
+    }
 
-    // INSERT USER
-    $insertQuery = "INSERT INTO users
-    (firstName,lastName,email,password)
+    // Hash password
+    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-    VALUES
-    ('$firstName','$lastName','$email','$password')";
+    // Insert user
+    $stmt = $conn->prepare(
+    "INSERT INTO users(firstName,lastName,email,password)
+    VALUES(?,?,?,?)");
 
-    if(mysqli_query($conn,$insertQuery)){
+    $stmt->bind_param(
+    "ssss",
+    $firstName,
+    $lastName,
+    $email,
+    $hashedPassword
+    );
 
-        echo "
-        <script>
-            alert('Registration Successful');
-            window.location.href='login.php';
-        </script>
-        ";
+    if($stmt->execute()){
+
+        echo "<script>
+        alert('Registration Successful');
+        window.location='login.php';
+        </script>";
 
     }else{
 
-        echo "
-        <script>
-            alert('Registration Failed');
-            window.location.href='register.php';
-        </script>
-        ";
+        die("Database Error: ".$conn->error);
+
     }
 
 }
 
 
-
-// ================= LOGIN =================
+/* ==========================================
+   USER LOGIN
+========================================== */
 
 if(isset($_POST['signIn'])){
 
-    $email    = $_POST['email'];
+    $email = strtolower(trim($_POST['email']));
     $password = $_POST['password'];
 
-    $sql = "SELECT * FROM users
-    WHERE email='$email'
-    AND password='$password'";
+    $stmt = $conn->prepare(
+    "SELECT * FROM users WHERE email=?");
 
-    $result = mysqli_query($conn,$sql);
+    $stmt->bind_param("s",$email);
+    $stmt->execute();
 
-    if(mysqli_num_rows($result) > 0){
+    $result = $stmt->get_result();
 
-        $_SESSION['email'] = $email;
+    if($result->num_rows == 1){
 
-        header("Location:index.php");
-        exit();
+        $user = $result->fetch_assoc();
+
+        if(password_verify($password,$user['password'])){
+
+            session_regenerate_id(true);
+
+            $_SESSION['email'] = $user['email'];
+
+            header("Location:index.php");
+            exit();
+
+        }else{
+
+            echo "<script>
+            alert('Incorrect Password');
+            window.location='login.php';
+            </script>";
+
+        }
 
     }else{
 
-        echo "
-        <script>
-            alert('Incorrect Email or Password');
-            window.location.href='login.php';
-        </script>
-        ";
+        echo "<script>
+        alert('Email Not Found');
+        window.location='login.php';
+        </script>";
+
     }
 
 }

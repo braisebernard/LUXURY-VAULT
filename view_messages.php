@@ -1,6 +1,6 @@
 <?php
-session_start();
 include("connect.php");
+include("admin_auth.php");
 
 // OPTIONAL ADMIN PROTECTION
 if(!isset($_SESSION['email'])){

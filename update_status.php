@@ -1,6 +1,6 @@
 <?php
-session_start();
 include("connect.php");
+include("admin_auth.php");
 
 $id = $_POST['id'];
 $status = $_POST['status'];
