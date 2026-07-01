@@ -1,48 +1,105 @@
 <?php
-session_set_cookie_params([
-    'httponly' => true,
-    'samesite' => 'Lax'
-]);
-session_start();
+
+include("admin_auth.php");
 include("connect.php");
 
-$id = $_GET['id'];
-
-// UPDATE PRODUCT
-if(isset($_POST['updateProduct'])){
-
-    $name = $_POST['name'];
-    $category = $_POST['category'];
-    $price = $_POST['price'];
-    $description = $_POST['description'];
-    $image = $_POST['image'];
-
-    mysqli_query($conn,
-    "UPDATE products SET
-
-    name='$name',
-    category='$category',
-    price='$price',
-    description='$description',
-    image='$image'
-
-    WHERE id='$id'");
-
+// Validate Product ID
+if(!isset($_GET['id']) || !is_numeric($_GET['id'])){
     header("Location: manage_products.php");
     exit();
 }
 
-// GET PRODUCT DETAILS
-$query = mysqli_query($conn,
-"SELECT * FROM products WHERE id='$id'");
+$id = (int)$_GET['id'];
 
-$product = mysqli_fetch_assoc($query);
+// Get product
+$stmt = $conn->prepare("SELECT * FROM products WHERE id=?");
+$stmt->bind_param("i",$id);
+$stmt->execute();
+
+$result = $stmt->get_result();
+
+if($result->num_rows==0){
+    header("Location: manage_products.php");
+    exit();
+}
+
+$product = $result->fetch_assoc();
+
+
+// UPDATE PRODUCT
+if(isset($_POST['updateProduct'])){
+
+    $name = trim($_POST['name']);
+    $category = trim($_POST['category']);
+    $price = (float)$_POST['price'];
+    $description = trim($_POST['description']);
+
+    $imageName = $product['image'];
+
+    // New image uploaded
+    if(isset($_FILES['image']) && $_FILES['image']['error']==0){
+
+        $allowed = ['jpg','jpeg','png','webp'];
+
+        $extension = strtolower(
+            pathinfo($_FILES['image']['name'],PATHINFO_EXTENSION)
+        );
+
+        if(in_array($extension,$allowed)){
+
+            // Delete old image
+            if(!empty($product['image']) &&
+               file_exists("images/".$product['image'])){
+                unlink("images/".$product['image']);
+            }
+
+            $imageName = uniqid().".".$extension;
+
+            move_uploaded_file(
+                $_FILES['image']['tmp_name'],
+                "images/".$imageName
+            );
+
+        }
+
+    }
+
+    $stmt = $conn->prepare(
+    "UPDATE products
+    SET
+    name=?,
+    category=?,
+    price=?,
+    description=?,
+    image=?
+    WHERE id=?");
+
+    $stmt->bind_param(
+        "ssdssi",
+        $name,
+        $category,
+        $price,
+        $description,
+        $imageName,
+        $id
+    );
+
+    if($stmt->execute()){
+
+        header("Location: manage_products.php");
+        exit();
+
+    }
+
+}
 
 ?>
 
 <!DOCTYPE html>
 <html>
+
 <head>
+
 <title>Edit Product</title>
 
 <style>
@@ -59,8 +116,6 @@ display:flex;
 background:#0b0b0b;
 color:white;
 }
-
-/* SIDEBAR */
 
 .sidebar{
 width:250px;
@@ -88,8 +143,6 @@ font-size:18px;
 .sidebar a:hover{
 color:gold;
 }
-
-/* MAIN */
 
 .main{
 flex:1;
@@ -125,6 +178,12 @@ height:120px;
 resize:none;
 }
 
+img{
+width:180px;
+border-radius:10px;
+margin-bottom:20px;
+}
+
 button{
 width:100%;
 padding:15px;
@@ -143,6 +202,7 @@ background:#d4af37;
 </style>
 
 </head>
+
 <body>
 
 <div class="sidebar">
@@ -153,7 +213,8 @@ background:#d4af37;
 <a href="add_product.php">Add Product</a>
 <a href="manage_products.php">Manage Products</a>
 <a href="view_orders.php">Orders</a>
-<a href="index.php">Website</a>
+<a href="view_users.php">Users</a>
+<a href="view_messages.php">Messages</a>
 <a href="logout.php">Logout</a>
 
 </div>
@@ -164,38 +225,48 @@ background:#d4af37;
 
 <div class="form-box">
 
-<form method="POST">
+<form method="POST" enctype="multipart/form-data">
+
+<img
+src="images/<?php echo htmlspecialchars($product['image']); ?>"
+alt="Product Image">
 
 <input
 type="text"
 name="name"
-value="<?php echo $product['name']; ?>"
+value="<?php echo htmlspecialchars($product['name']); ?>"
 required>
 
 <input
 type="text"
 name="category"
-value="<?php echo $product['category']; ?>"
+value="<?php echo htmlspecialchars($product['category']); ?>"
 required>
 
 <input
 type="number"
+step="0.01"
 name="price"
-value="<?php echo $product['price']; ?>"
+value="<?php echo htmlspecialchars($product['price']); ?>"
 required>
 
+<label>Replace Image (Optional)</label>
+
 <input
-type="text"
+type="file"
 name="image"
-value="<?php echo $product['image']; ?>"
-required>
+accept=".jpg,.jpeg,.png,.webp">
 
 <textarea
 name="description"
-required><?php echo $product['description']; ?></textarea>
+required><?php echo htmlspecialchars($product['description']); ?></textarea>
 
-<button name="updateProduct">
+<button
+type="submit"
+name="updateProduct">
+
 Update Product
+
 </button>
 
 </form>
@@ -205,4 +276,5 @@ Update Product
 </div>
 
 </body>
+
 </html>

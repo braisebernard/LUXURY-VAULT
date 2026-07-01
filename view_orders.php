@@ -1,219 +1,336 @@
 <?php
-include("connect.php");
+
 include("admin_auth.php");
 
-// ADMIN PROTECTION
-if(!isset($_SESSION['email'])){
-    header("Location: login.php");
-    exit();
-}
+// Get all orders
+$stmt = $conn->prepare("SELECT * FROM orders ORDER BY order_date DESC");
+$stmt->execute();
+$query = $stmt->get_result();
 
-// FETCH ALL ORDERS
-$query = mysqli_query($conn,
-"SELECT * FROM orders ORDER BY order_date DESC");
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>View Orders | LuxuryVault</title>
+
+<title>LuxuryVault | Orders</title>
 
 <style>
 
 *{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:Poppins,sans-serif;
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Poppins,sans-serif;
 }
 
 body{
-    background:#0b0b0b;
-    color:white;
+background:#0b0b0b;
+color:white;
 }
 
-/* NAVBAR */
 .navbar{
-    background:black;
-    padding:20px 50px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    border-bottom:1px solid #222;
+background:black;
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:20px 50px;
+border-bottom:1px solid #222;
 }
 
 .logo{
-    color:gold;
-    font-size:28px;
-    font-weight:bold;
+font-size:28px;
+font-weight:bold;
+color:gold;
 }
 
 .nav-links a{
-    color:white;
-    text-decoration:none;
-    margin-left:20px;
+color:white;
+text-decoration:none;
+margin-left:20px;
 }
 
 .nav-links a:hover{
-    color:gold;
+color:gold;
 }
 
-/* PAGE TITLE */
 .title{
-    text-align:center;
-    margin:40px 0;
+text-align:center;
+margin:40px 0;
 }
 
 .title h1{
-    color:gold;
-    font-size:40px;
+color:gold;
+font-size:40px;
 }
 
-/* ORDER CARD */
 .container{
-    width:90%;
-    margin:auto;
+width:90%;
+margin:auto;
 }
 
 .order-card{
-    background:#111;
-    border:1px solid #222;
-    border-radius:12px;
-    padding:25px;
-    margin-bottom:25px;
+background:#111;
+border:1px solid #222;
+border-radius:12px;
+padding:25px;
+margin-bottom:25px;
 }
 
 .order-card h2{
-    color:gold;
-    margin-bottom:15px;
+color:gold;
+margin-bottom:20px;
 }
 
 .order-card p{
-    margin:10px 0;
-    color:#ddd;
+margin:10px 0;
+color:#ddd;
+line-height:1.7;
 }
 
 .status{
-    color:gold;
-    font-weight:bold;
+color:gold;
+font-weight:bold;
 }
 
-/* FORM */
+.payment-status{
+color:#32CD32;
+font-weight:bold;
+}
+
+.reference{
+color:#4FC3F7;
+font-weight:bold;
+font-family:monospace;
+}
+
 form{
-    margin-top:20px;
+margin-top:20px;
 }
 
 select{
-    padding:10px;
-    background:#1a1a1a;
-    color:white;
-    border:1px solid #333;
-    border-radius:5px;
+padding:10px;
+background:#1a1a1a;
+border:1px solid #333;
+color:white;
+border-radius:5px;
 }
 
 button{
-    padding:10px 20px;
-    border:none;
-    background:gold;
-    color:black;
-    font-weight:bold;
-    cursor:pointer;
-    border-radius:5px;
-    margin-left:10px;
+padding:10px 20px;
+background:gold;
+color:black;
+border:none;
+font-weight:bold;
+border-radius:5px;
+cursor:pointer;
+margin-left:10px;
 }
 
 button:hover{
-    background:#d4af37;
+background:#d4af37;
+}
+
+.success{
+background:#0f5132;
+padding:15px;
+width:90%;
+margin:20px auto;
+text-align:center;
+border-radius:10px;
 }
 
 .back{
-    text-align:center;
-    margin:40px;
+text-align:center;
+margin:40px;
 }
 
 .back a{
-    color:gold;
-    text-decoration:none;
+color:gold;
+text-decoration:none;
+font-weight:bold;
 }
 
 </style>
 
 </head>
+
 <body>
 
-<!-- NAVBAR -->
 <div class="navbar">
 
-    <div class="logo">LuxuryVault</div>
+<div class="logo">
 
-    <div class="nav-links">
-        <a href="admin.php">Dashboard</a>
-        <a href="logout.php">Logout</a>
-    </div>
+LuxuryVault
 
 </div>
 
-<!-- TITLE -->
+<div class="nav-links">
+
+<a href="admin.php">Dashboard</a>
+
+<a href="manage_products.php">Products</a>
+
+<a href="view_users.php">Users</a>
+
+<a href="view_messages.php">Messages</a>
+
+<a href="logout.php">Logout</a>
+
+</div>
+
+</div>
+
 <div class="title">
-    <h1>Customer Orders</h1>
+
+<h1>Customer Orders</h1>
+
 </div>
+
+<?php if(isset($_GET['updated'])){ ?>
+
+<div class="success">
+
+Order Status Updated Successfully.
+
+</div>
+
+<?php } ?>
 
 <div class="container">
 
-<?php while($row = mysqli_fetch_assoc($query)){ ?>
+<?php while($row=$query->fetch_assoc()){ ?>
 
 <div class="order-card">
 
-    <h2>Order #<?php echo $row['id']; ?></h2>
+<h2>
 
-    <p><strong>Customer:</strong>
-    <?php echo $row['customer_name']; ?></p>
+Order #<?php echo (int)$row['id']; ?>
 
-    <p><strong>Email:</strong>
-    <?php echo $row['user_email']; ?></p>
+</h2>
 
-    <p><strong>Phone:</strong>
-    <?php echo $row['phone']; ?></p>
+<p>
 
-    <p><strong>Address:</strong>
-    <?php echo $row['address']; ?></p>
+<strong>Customer:</strong>
 
-    <p><strong>Payment:</strong>
-    <?php echo $row['payment_method']; ?></p>
+<?php echo htmlspecialchars($row['customer_name']); ?>
 
-    <p><strong>Total:</strong>
-    TZS <?php echo number_format($row['total']); ?></p>
+</p>
 
-    <p class="status">
-        Current Status:
-        <?php echo $row['status']; ?>
-    </p>
+<p>
 
-    <form action="update_status.php" method="POST">
+<strong>Email:</strong>
 
-        <input type="hidden"
-        name="id"
-        value="<?php echo $row['id']; ?>">
+<?php echo htmlspecialchars($row['user_email']); ?>
 
-        <select name="status">
+</p>
 
-            <option value="Pending">Pending</option>
+<p>
 
-            <option value="Processing">Processing</option>
+<strong>Phone:</strong>
 
-            <option value="Delivered">Delivered</option>
+<?php echo htmlspecialchars($row['phone']); ?>
 
-            <option value="Cancelled">Cancelled</option>
+</p>
 
-        </select>
+<p>
 
-        <button type="submit">
-            Update Status
-        </button>
+<strong>Delivery Address:</strong>
 
-    </form>
+<?php echo htmlspecialchars($row['address']); ?>
+
+</p>
+
+<p>
+
+<strong>Payment Method:</strong>
+
+<?php echo htmlspecialchars($row['payment_method']); ?>
+
+</p>
+
+<p class="payment-status">
+
+<strong>Payment Status:</strong>
+
+<?php echo htmlspecialchars($row['payment_status']); ?>
+
+</p>
+
+<p class="reference">
+
+<strong>Payment Reference:</strong>
+
+<?php echo htmlspecialchars($row['payment_reference']); ?>
+
+</p>
+
+<p>
+
+<strong>Total Paid:</strong>
+
+TZS <?php echo number_format($row['total']); ?>
+
+</p>
+
+<p class="status">
+
+<strong>Order Status:</strong>
+
+<?php echo htmlspecialchars($row['status']); ?>
+
+</p>
+
+<p>
+
+<strong>Order Date:</strong>
+
+<?php echo htmlspecialchars($row['order_date']); ?>
+
+</p>
+
+<form action="update_order.php" method="GET">
+
+<input
+type="hidden"
+name="id"
+value="<?php echo (int)$row['id']; ?>">
+
+<select name="status">
+
+<option value="Pending"
+<?php if($row['status']=="Pending") echo "selected"; ?>>
+Pending
+</option>
+
+<option value="Processing"
+<?php if($row['status']=="Processing") echo "selected"; ?>>
+Processing
+</option>
+
+<option value="Delivered"
+<?php if($row['status']=="Delivered") echo "selected"; ?>>
+Delivered
+</option>
+
+<option value="Cancelled"
+<?php if($row['status']=="Cancelled") echo "selected"; ?>>
+Cancelled
+</option>
+
+</select>
+
+<button type="submit">
+
+Update Status
+
+</button>
+
+</form>
 
 </div>
 
@@ -222,10 +339,15 @@ button:hover{
 </div>
 
 <div class="back">
-    <a href="admin.php">
-        ← Back to Dashboard
-    </a>
+
+<a href="admin.php">
+
+← Back To Dashboard
+
+</a>
+
 </div>
 
 </body>
+
 </html>

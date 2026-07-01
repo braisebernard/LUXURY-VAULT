@@ -150,7 +150,7 @@ background:#555;
 Total: TZS <?php echo number_format($total); ?>
 </div>
 
-<form action="place_order.php" method="POST">
+<form action="payment.php" method="POST">
 
 <input
 type="text"
