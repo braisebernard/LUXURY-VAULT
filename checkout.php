@@ -1,4 +1,5 @@
 <?php
+
 session_set_cookie_params([
     'httponly' => true,
     'samesite' => 'Lax'
@@ -7,53 +8,94 @@ session_set_cookie_params([
 session_start();
 include("connect.php");
 
+// User must be logged in
 if(!isset($_SESSION['email'])){
     header("Location: login.php");
     exit();
 }
 
-$total = 0;
-
 $email = $_SESSION['email'];
 
-$query = mysqli_query($conn,
-"SELECT cart.*, products.*
+// Get cart securely
+$stmt = $conn->prepare("
+SELECT
+products.price,
+cart.quantity
 FROM cart
-JOIN products ON cart.product_id = products.id
-WHERE cart.user_email='$email'");
+INNER JOIN products
+ON cart.product_id = products.id
+WHERE cart.user_email = ?
+");
 
-while($row=mysqli_fetch_assoc($query)){
+$stmt->bind_param("s",$email);
+$stmt->execute();
+
+$result = $stmt->get_result();
+
+$total = 0;
+
+while($row = $result->fetch_assoc()){
     $total += $row['price'] * $row['quantity'];
 }
+
+// Empty cart
+if($total <= 0){
+    header("Location: cart.php");
+    exit();
+}
+
 ?>
 
 <!DOCTYPE html>
 <html>
+
 <head>
-<title>Checkout</title>
+
+<title>LuxuryVault Checkout</title>
 
 <style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Poppins,sans-serif;
+}
 
 body{
 background:#0b0b0b;
 color:white;
-font-family:Poppins,sans-serif;
 }
 
 .container{
-width:600px;
-margin:50px auto;
+width:90%;
+max-width:650px;
+margin:60px auto;
 background:#111;
 padding:40px;
 border-radius:15px;
+border:1px solid #222;
 }
 
 h1{
 color:gold;
 margin-bottom:30px;
+text-align:center;
 }
 
-input,select{
+.total{
+background:#1a1a1a;
+padding:20px;
+border-radius:10px;
+margin-bottom:25px;
+font-size:24px;
+font-weight:bold;
+color:gold;
+text-align:center;
+}
+
+input,
+select{
 width:100%;
 padding:15px;
 margin-bottom:20px;
@@ -61,27 +103,43 @@ background:#1a1a1a;
 border:1px solid #333;
 color:white;
 border-radius:8px;
+font-size:16px;
 }
 
 button{
 width:100%;
 padding:15px;
-background:gold;
 border:none;
-font-weight:bold;
-cursor:pointer;
 border-radius:8px;
+cursor:pointer;
+font-weight:bold;
+font-size:16px;
+margin-top:10px;
 }
 
-.total{
-font-size:24px;
-color:gold;
-margin-bottom:25px;
+.placeBtn{
+background:gold;
+color:black;
+}
+
+.placeBtn:hover{
+background:#d4af37;
+}
+
+.backBtn{
+background:#333;
+color:white;
+margin-top:15px;
+}
+
+.backBtn:hover{
+background:#555;
 }
 
 </style>
 
 </head>
+
 <body>
 
 <div class="container">
@@ -94,41 +152,64 @@ Total: TZS <?php echo number_format($total); ?>
 
 <form action="place_order.php" method="POST">
 
-<input type="text"
+<input
+type="text"
 name="customer_name"
 placeholder="Full Name"
+maxlength="100"
 required>
 
-<input type="text"
+<input
+type="text"
 name="phone"
 placeholder="Phone Number"
+maxlength="20"
 required>
 
-<input type="text"
+<input
+type="text"
 name="address"
 placeholder="Delivery Address"
+maxlength="255"
 required>
 
-<select name="payment_method">
+<select name="payment_method" required>
 
-<option>M-Pesa</option>
-<option>Airtel Money</option>
-<option>Tigo Pesa</option>
-<option>Cash On Delivery</option>
+<option value="M-Pesa">M-Pesa</option>
+
+<option value="Airtel Money">Airtel Money</option>
+
+<option value="Tigo Pesa">Tigo Pesa</option>
+
+<option value="Cash On Delivery">Cash On Delivery</option>
 
 </select>
 
-<input type="hidden"
+<input
+type="hidden"
 name="total"
-value="<?php echo $total; ?>">
+value="<?php echo (float)$total; ?>">
 
-<button>
+<button
+type="submit"
+class="placeBtn">
 Place Order
 </button>
 
 </form>
 
+<a href="cart.php">
+
+<button class="backBtn">
+
+Back To Cart
+
+</button>
+
+</a>
+
 </div>
 
 </body>
+
 </html>

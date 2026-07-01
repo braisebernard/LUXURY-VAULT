@@ -7,156 +7,191 @@ session_set_cookie_params([
 session_start();
 include("connect.php");
 
-// Check if product id exists
-if(!isset($_GET['id'])){
+// Validate Product ID
+if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     header("Location: products.php");
     exit();
 }
 
-$id = $_GET['id'];
+$id = (int)$_GET['id'];
 
-// Fetch selected product
-$query = mysqli_query($conn, "SELECT * FROM products WHERE id='$id'");
+// Fetch Product Securely
+$stmt = $conn->prepare("SELECT * FROM products WHERE id = ?");
+$stmt->bind_param("i", $id);
+$stmt->execute();
 
-if(mysqli_num_rows($query) == 0){
+$result = $stmt->get_result();
+
+if ($result->num_rows == 0) {
     header("Location: products.php");
     exit();
 }
 
-$row = mysqli_fetch_assoc($query);
+$row = $result->fetch_assoc();
 
-$image = !empty($row['image'])
-    ? 'images/'.$row['image']
-    : 'https://via.placeholder.com/500x500?text=LuxuryVault';
-
+$image = (!empty($row['image']) && file_exists("images/" . $row['image']))
+    ? "images/" . htmlspecialchars($row['image'])
+    : "https://via.placeholder.com/500x500?text=LuxuryVault";
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><?php echo $row['name']; ?></title>
+
+<title><?php echo htmlspecialchars($row['name']); ?></title>
 
 <style>
 
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Poppins,sans-serif;
+}
+
 body{
-    background:#0b0b0b;
-    color:white;
-    font-family:Poppins,sans-serif;
-    margin:0;
+background:#0b0b0b;
+color:white;
 }
 
 .navbar{
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    padding:20px 50px;
-    background:black;
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:20px 50px;
+background:black;
+border-bottom:1px solid #222;
 }
 
 .logo{
-    color:gold;
-    font-size:25px;
-    font-weight:bold;
+font-size:28px;
+font-weight:bold;
+color:gold;
 }
 
 .nav-links a{
-    color:white;
-    text-decoration:none;
-    margin-left:20px;
+color:white;
+text-decoration:none;
+margin-left:20px;
+transition:.3s;
 }
 
 .nav-links a:hover{
-    color:gold;
+color:gold;
 }
 
 .container{
-    width:90%;
-    max-width:1100px;
-    margin:60px auto;
-    display:flex;
-    gap:50px;
-    flex-wrap:wrap;
+width:90%;
+max-width:1200px;
+margin:60px auto;
+display:flex;
+gap:60px;
+flex-wrap:wrap;
+align-items:flex-start;
 }
 
 .image-section{
-    flex:1;
+flex:1;
+min-width:350px;
 }
 
 .image-section img{
-    width:100%;
-    border-radius:15px;
+width:100%;
+border-radius:15px;
+border:1px solid #222;
 }
 
 .info-section{
-    flex:1;
+flex:1;
+min-width:350px;
 }
 
 .info-section h1{
-    color:gold;
+font-size:42px;
+color:gold;
+margin-bottom:10px;
 }
 
 .category{
-    color:#999;
-    margin-top:10px;
+color:#999;
+margin-bottom:25px;
 }
 
 .price{
-    font-size:32px;
-    margin:20px 0;
-    font-weight:bold;
+font-size:35px;
+font-weight:bold;
+margin-bottom:25px;
 }
 
 .description{
-    color:#ccc;
-    line-height:1.8;
+line-height:1.8;
+color:#ccc;
+margin-bottom:35px;
 }
 
 .btn{
-    margin-top:30px;
-    padding:15px 35px;
-    border:none;
-    background:gold;
-    color:black;
-    font-weight:bold;
-    border-radius:5px;
-    cursor:pointer;
+padding:15px 40px;
+background:gold;
+color:black;
+border:none;
+font-weight:bold;
+font-size:16px;
+cursor:pointer;
+border-radius:6px;
+transition:.3s;
 }
 
 .btn:hover{
-    background:#d4af37;
+background:#d4af37;
 }
 
 .footer{
-    text-align:center;
-    padding:30px;
-    color:#777;
+margin-top:80px;
+padding:30px;
+text-align:center;
+background:black;
+color:#888;
+}
+
+.footer a{
+color:gold;
+text-decoration:none;
 }
 
 </style>
-</head>
-<body>
 
-<!-- NAVBAR -->
+</head>
+
+<body>
 
 <div class="navbar">
 
-<div class="logo">LuxuryVault</div>
+<div class="logo">
+LuxuryVault
+</div>
 
 <div class="nav-links">
 
 <a href="index.php">Home</a>
+
 <a href="products.php">Products</a>
 
 <?php if(isset($_SESSION['email'])){ ?>
 
 <a href="cart.php">Cart</a>
+
+<a href="my_orders.php">My Orders</a>
+
 <a href="logout.php">Logout</a>
 
-<?php } else { ?>
+<?php }else{ ?>
 
 <a href="login.php">Login</a>
+
 <a href="register.php">Register</a>
 
 <?php } ?>
@@ -165,22 +200,24 @@ body{
 
 </div>
 
-<!-- PRODUCT DETAILS -->
-
 <div class="container">
 
 <div class="image-section">
 
-<img src="<?php echo $image; ?>">
+<img src="<?php echo $image; ?>"
+alt="<?php echo htmlspecialchars($row['name']); ?>">
 
 </div>
 
 <div class="info-section">
 
-<h1><?php echo $row['name']; ?></h1>
+<h1>
+<?php echo htmlspecialchars($row['name']); ?>
+</h1>
 
 <div class="category">
-Category: <?php echo $row['category']; ?>
+Category :
+<?php echo htmlspecialchars($row['category']); ?>
 </div>
 
 <div class="price">
@@ -188,23 +225,27 @@ TZS <?php echo number_format($row['price']); ?>
 </div>
 
 <div class="description">
-<?php echo $row['description']; ?>
+<?php echo nl2br(htmlspecialchars($row['description'])); ?>
 </div>
 
 <?php if(isset($_SESSION['email'])){ ?>
 
-<a href="add_to_cart.php?id=<?php echo $row['id']; ?>">
-    <button class="btn">
-        Add To Cart
-    </button>
+<a href="add_to_cart.php?id=<?php echo (int)$row['id']; ?>">
+
+<button class="btn">
+Add To Cart
+</button>
+
 </a>
 
-<?php } else { ?>
+<?php }else{ ?>
 
 <a href="login.php">
-    <button class="btn">
-        Login To Buy
-    </button>
+
+<button class="btn">
+Login To Buy
+</button>
+
 </a>
 
 <?php } ?>
@@ -214,9 +255,12 @@ TZS <?php echo number_format($row['price']); ?>
 </div>
 
 <div class="footer">
-    © 2026 LuxuryVault |
-    <a href="contact.php">Contact Us</a>
+
+© 2026 LuxuryVault |
+<a href="contact.php">Contact Us</a>
+
 </div>
 
 </body>
+
 </html>
