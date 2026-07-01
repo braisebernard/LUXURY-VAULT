@@ -16,7 +16,7 @@ if(!isset($_SESSION['email'])){
 
 $email = $_SESSION['email'];
 
-// Required fields
+// Check required fields
 if(
     !isset($_POST['customer_name']) ||
     !isset($_POST['phone']) ||
@@ -26,7 +26,7 @@ if(
     !isset($_POST['payment_reference']) ||
     !isset($_POST['total'])
 ){
-    header("Location:checkout.php");
+    header("Location: checkout.php");
     exit();
 }
 
@@ -39,7 +39,7 @@ $paymentStatus = trim($_POST['payment_status']);
 $paymentReference = trim($_POST['payment_reference']);
 $total = (float)$_POST['total'];
 
-// Allowed payment methods
+// Validate payment method
 $allowedPayments = [
     "M-Pesa",
     "Airtel Money",
@@ -47,20 +47,20 @@ $allowedPayments = [
     "Cash On Delivery"
 ];
 
-if(!in_array($payment,$allowedPayments)){
+if(!in_array($payment, $allowedPayments)){
     die("Invalid payment method.");
 }
 
-// Verify cart total from database
+// Verify total from database
 $stmt = $conn->prepare("
 SELECT SUM(products.price * cart.quantity) AS total
 FROM cart
 INNER JOIN products
 ON cart.product_id = products.id
-WHERE cart.user_email=?
+WHERE cart.user_email = ?
 ");
 
-$stmt->bind_param("s",$email);
+$stmt->bind_param("s", $email);
 $stmt->execute();
 
 $result = $stmt->get_result();
@@ -68,228 +68,86 @@ $data = $result->fetch_assoc();
 
 $dbTotal = (float)$data['total'];
 
-if($dbTotal<=0){
+if($dbTotal <= 0){
     die("Your cart is empty.");
 }
 
-// Use database total
+// Always trust database total
 $total = $dbTotal;
 
-// Default order status
+// Default Order Status
 $orderStatus = "Processing";
 
-// Transaction
+// Begin Transaction
 $conn->begin_transaction();
 
 try{
 
-$stmt = $conn->prepare("
-INSERT INTO orders
-(
-customer_name,
-phone,
-address,
-payment_method,
-payment_status,
-payment_reference,
-total,
-status,
-user_email
-)
+    // Insert Order
+    $stmt = $conn->prepare("
+    INSERT INTO orders
+    (
+        customer_name,
+        phone,
+        address,
+        payment_method,
+        payment_status,
+        payment_reference,
+        total,
+        status,
+        user_email
+    )
+    VALUES
+    (
+        ?,?,?,?,?,?,?,?,?
+    )
+    ");
 
-VALUES
-(
-?,?,?,?,?,?,?,?,?
-)
-");
+    $stmt->bind_param(
+        "ssssssdss",
+        $name,
+        $phone,
+        $address,
+        $payment,
+        $paymentStatus,
+        $paymentReference,
+        $total,
+        $orderStatus,
+        $email
+    );
 
-$stmt->bind_param(
-"ssssssdss",
-$name,
-$phone,
-$address,
-$payment,
-$paymentStatus,
-$paymentReference,
-$total,
-$orderStatus,
-$email
-);
+    $stmt->execute();
 
-$stmt->execute();
+    // Clear Cart
+    $stmt = $conn->prepare(
+        "DELETE FROM cart WHERE user_email=?"
+    );
 
-// Clear cart
-$stmt = $conn->prepare(
-"DELETE FROM cart
-WHERE user_email=?"
-);
+    $stmt->bind_param("s",$email);
+    $stmt->execute();
 
-$stmt->bind_param("s",$email);
-$stmt->execute();
+    // Commit Transaction
+    $conn->commit();
 
-$conn->commit();
+    // Redirect to Email Sandbox
+    header(
+        "Location: send_email.php?" .
+        "customer=" . urlencode($name) .
+        "&payment=" . urlencode($payment) .
+        "&payment_status=" . urlencode($paymentStatus) .
+        "&reference=" . urlencode($paymentReference) .
+        "&total=" . urlencode($total) .
+        "&status=" . urlencode($orderStatus)
+    );
+
+    exit();
 
 }catch(Exception $e){
 
-$conn->rollback();
+    $conn->rollback();
 
-die("Order Failed : ".$e->getMessage());
+    die("Order Failed: ".$e->getMessage());
 
 }
 
 ?>
-
-<!DOCTYPE html>
-<html>
-
-<head>
-
-<title>Payment Successful</title>
-
-<style>
-
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:Poppins,sans-serif;
-}
-
-body{
-background:#0b0b0b;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-color:white;
-}
-
-.box{
-width:600px;
-background:#111;
-padding:45px;
-border-radius:15px;
-border:1px solid #222;
-text-align:center;
-}
-
-h1{
-color:gold;
-margin-bottom:20px;
-}
-
-.success{
-font-size:70px;
-margin-bottom:20px;
-}
-
-.info{
-background:#1a1a1a;
-padding:20px;
-border-radius:10px;
-margin:25px 0;
-text-align:left;
-line-height:2;
-}
-
-.info strong{
-color:gold;
-}
-
-button{
-padding:15px 30px;
-background:gold;
-border:none;
-font-weight:bold;
-border-radius:8px;
-cursor:pointer;
-margin:10px;
-}
-
-button:hover{
-background:#d4af37;
-}
-
-</style>
-
-</head>
-
-<body>
-
-<div class="box">
-
-<div class="success">
-
-✅
-
-</div>
-
-<h1>
-
-Payment Successful
-
-</h1>
-
-<p>
-
-Your payment has been processed successfully.
-
-</p>
-
-<div class="info">
-
-<strong>Customer:</strong>
-
-<?php echo htmlspecialchars($name); ?>
-
-<br>
-
-<strong>Payment Method:</strong>
-
-<?php echo htmlspecialchars($payment); ?>
-
-<br>
-
-<strong>Payment Status:</strong>
-
-<?php echo htmlspecialchars($paymentStatus); ?>
-
-<br>
-
-<strong>Reference:</strong>
-
-<?php echo htmlspecialchars($paymentReference); ?>
-
-<br>
-
-<strong>Total Paid:</strong>
-
-TZS <?php echo number_format($total); ?>
-
-</div>
-
-<a href="my_orders.php">
-
-<button>
-
-View My Orders
-
-</button>
-
-</a>
-
-<a href="index.php">
-
-<button>
-
-Back To Homepage
-
-</button>
-
-</a>
-
-</div>
-
-</body>
-
-</html>
