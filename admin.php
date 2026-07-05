@@ -2,6 +2,10 @@
 include("connect.php");
 include("admin_auth.php");
 
+/*==========================================
+DASHBOARD COUNTS
+==========================================*/
+
 $totalProducts = mysqli_num_rows(
 mysqli_query($conn,"SELECT * FROM products"));
 
@@ -9,22 +13,35 @@ $totalOrders = mysqli_num_rows(
 mysqli_query($conn,"SELECT * FROM orders"));
 
 $totalUsers = mysqli_num_rows(
-mysqli_query($conn,"SELECT * FROM users"));
+mysqli_query($conn,"SELECT * FROM users WHERE role='customer'"));
+
+$totalSellers = mysqli_num_rows(
+mysqli_query($conn,"SELECT * FROM users WHERE role='seller'"));
+
+$pendingSellers = mysqli_num_rows(
+mysqli_query($conn,"
+SELECT * FROM users
+WHERE role='seller'
+AND status='pending'
+"));
+
+$approvedSellers = mysqli_num_rows(
+mysqli_query($conn,"
+SELECT * FROM users
+WHERE role='seller'
+AND status='approved'
+"));
 
 $revenueQuery = mysqli_query($conn,
 "SELECT SUM(total) AS revenue FROM orders");
 
-$revenueData = mysqli_fetch_assoc($revenueQuery);
+$revenueData=mysqli_fetch_assoc($revenueQuery);
 
-$revenue = $revenueData['revenue'];
+$revenue=$revenueData['revenue'];
 
-if($revenue == NULL){
-    $revenue = 0;
+if($revenue==NULL){
+$revenue=0;
 }
-
-$productCount = mysqli_num_rows(mysqli_query($conn,"SELECT * FROM products"));
-$orderCount = mysqli_num_rows(mysqli_query($conn,"SELECT * FROM orders"));
-$userCount = mysqli_num_rows(mysqli_query($conn,"SELECT * FROM users"));
 ?>
 
 <!DOCTYPE html>
@@ -132,16 +149,65 @@ margin-bottom:10px;
 
 <div class="sidebar">
 
-<div class="logo">LuxuryVault</div>
+<div class="logo">
 
-<a href="admin.php">Dashboard</a>
-<a href="add_product.php">Add Product</a>
-<a href="manage_products.php">Manage Products</a>
-<a href="view_users.php">View Users</a>
-<a href="view_messages.php">View Messages</a>
-<a href="view_orders.php">Orders</a>
-<a href="index.php">Website</a>
-<a href="logout.php">Logout</a>
+LuxuryVault
+
+</div>
+
+<a href="admin.php">
+
+Dashboard
+
+</a>
+
+<a href="seller_requests.php">
+
+Seller Applications
+
+</a>
+
+<a href="add_product.php">
+
+Add Product
+
+</a>
+
+<a href="manage_products.php">
+
+Manage Products
+
+</a>
+
+<a href="view_orders.php">
+
+Orders
+
+</a>
+
+<a href="view_users.php">
+
+Customers
+
+</a>
+
+<a href="view_messages.php">
+
+Messages
+
+</a>
+
+<a href="index.php">
+
+Website
+
+</a>
+
+<a href="logout.php">
+
+Logout
+
+</a>
 
 </div>
 
@@ -151,47 +217,120 @@ margin-bottom:10px;
 <div class="stats">
 
 <div class="card">
-<h2><?php echo $totalProducts; ?></h2>
-<p>Products</p>
+
+<h2>
+
+<?php echo $totalProducts; ?>
+
+</h2>
+
+<p>
+
+Products
+
+</p>
+
 </div>
 
 <div class="card">
-<h2><?php echo $totalOrders; ?></h2>
-<p>Orders</p>
+
+<h2>
+
+<?php echo $totalOrders; ?>
+
+</h2>
+
+<p>
+
+Orders
+
+</p>
+
 </div>
 
 <div class="card">
-<h2><?php echo $totalUsers; ?></h2>
-<p>Users</p>
+
+<h2>
+
+<?php echo $totalUsers; ?>
+
+</h2>
+
+<p>
+
+Customers
+
+</p>
+
 </div>
 
 <div class="card">
-<h2>TZS <?php echo number_format($revenue); ?></h2>
-<p>Revenue</p>
-</div>
 
-</div>
+<h2>
 
-<div class="cards">
+<?php echo $totalSellers; ?>
 
-<div class="card">
-<h1><?php echo $productCount; ?></h1>
-<p>Total Products</p>
-</div>
+</h2>
 
-<div class="card">
-<h1><?php echo $orderCount; ?></h1>
-<p>Total Orders</p>
+<p>
+
+Sellers
+
+</p>
+
 </div>
 
 <div class="card">
-<h1><?php echo $userCount; ?></h1>
-<p>Total Users</p>
+
+<h2>
+
+<?php echo $pendingSellers; ?>
+
+</h2>
+
+<p>
+
+Pending Sellers
+
+</p>
+
 </div>
+
+<div class="card">
+
+<h2>
+
+<?php echo $approvedSellers; ?>
+
+</h2>
+
+<p>
+
+Approved Sellers
+
+</p>
+
+</div>
+
+<div class="card">
+
+<h2>
+
+TZS <?php echo number_format($revenue); ?>
+
+</h2>
+
+<p>
+
+Revenue
+
+</p>
 
 </div>
 
 </div>
+
+
 
 </body>
 </html>
