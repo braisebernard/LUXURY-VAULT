@@ -7,31 +7,73 @@ session_set_cookie_params([
 session_start();
 include("connect.php");
 
-/* SEARCH + FILTER */
+/* ============================
+   SEARCH & FILTER
+============================ */
+
 $search = "";
 $category = "";
 
 if(isset($_GET['search'])){
-    $search = $_GET['search'];
+    $search = trim($_GET['search']);
 }
 
 if(isset($_GET['category'])){
-    $category = $_GET['category'];
+    $category = trim($_GET['category']);
 }
 
-$sql = "SELECT * FROM products WHERE 1";
+/* ============================
+   BUILD QUERY
+============================ */
+
+$sql = "
+
+SELECT
+
+products.*,
+
+users.shop_name
+
+FROM products
+
+LEFT JOIN users
+
+ON products.seller_id = users.id
+
+WHERE products.status='approved'
+
+";
+
+$params = [];
+$types = "";
 
 if($search != ""){
-    $sql .= " AND name LIKE '%$search%'";
+
+    $sql .= " AND products.name LIKE ? ";
+
+    $params[] = "%".$search."%";
+    $types .= "s";
+
 }
 
 if($category != ""){
-    $sql .= " AND category='$category'";
+
+    $sql .= " AND products.category=? ";
+
+    $params[] = $category;
+    $types .= "s";
+
 }
 
-$sql .= " ORDER BY id DESC";
+$sql .= " ORDER BY products.id DESC";
+$stmt = $conn->prepare($sql);
+if(!empty($params)){
+    $stmt->bind_param($types,...$params);
+}
 
-$query = mysqli_query($conn, $sql);
+$stmt->execute();
+$query = $stmt->get_result();
+
 ?>
 
 <!DOCTYPE html>
@@ -293,41 +335,137 @@ $image = !empty($row['image'])
 
 <div class="product-card">
 
-    <img src="<?php echo $image; ?>">
+<img src="<?php echo htmlspecialchars($image); ?>">
 
-    <div class="product-info">
+<div class="product-info">
 
-        <h3><?php echo $row['name']; ?></h3>
+<h3>
 
-        <div class="category">
-            <?php echo $row['category']; ?>
-        </div>
+<?php echo htmlspecialchars($row['name']); ?>
 
-        <div class="price">
-            TZS <?php echo number_format($row['price']); ?>
-        </div>
+</h3>
 
-        <div class="description">
-            <?php echo substr($row['description'],0,45)." ..."; ?>
-        </div>
+<div class="category">
 
-        <?php if(isset($_SESSION['email'])){ ?>
+<?php echo htmlspecialchars($row['category']); ?>
 
-            <a href="product.php?id=<?php echo $row['id']; ?>">
-                <button class="btn">View Product</button>
-            </a>
+</div>
 
-        <?php } else { ?>
+<p style="margin-bottom:10px;color:#bbb;">
 
-            <a href="login.php">
-                <button class="btn">
-                    Login To Buy
-                </button>
-            </a>
+<strong>Seller:</strong>
 
-        <?php } ?>
+<?php
 
-    </div>
+if(empty($row['seller_id'])){
+
+    echo "LuxuryVault";
+
+}else{
+
+    echo htmlspecialchars($row['shop_name']);
+
+}
+
+?>
+
+</p>
+
+<div class="price">
+
+TZS <?php echo number_format($row['price']); ?>
+
+</div>
+
+<p style="margin-bottom:10px;">
+
+<strong>Stock:</strong>
+
+<?php
+
+if($row['quantity']>0){
+
+    echo "<span style='color:#4CAF50;'>".$row['quantity']." Available</span>";
+
+}else{
+
+    echo "<span style='color:red;'>Out Of Stock</span>";
+
+}
+
+?>
+
+</p>
+
+<div class="description">
+
+<?php
+
+echo htmlspecialchars(
+
+substr($row['description'],0,45)
+
+)." ...";
+
+?>
+
+</div>
+
+<?php
+
+if($row['quantity']>0){
+
+    if(isset($_SESSION['email'])){
+
+?>
+
+<a href="product.php?id=<?php echo (int)$row['id']; ?>">
+
+<button class="btn">
+
+View Product
+
+</button>
+
+</a>
+
+<?php
+
+    }else{
+
+?>
+
+<a href="login.php">
+
+<button class="btn">
+
+Login To Buy
+
+</button>
+</a>
+<?php
+
+    }
+
+}else{
+
+?>
+
+<button
+
+class="btn"
+
+disabled
+
+style="background:#555;cursor:not-allowed;">
+
+Out Of Stock
+
+</button>
+
+<?php } ?>
+
+</div>
 
 </div>
 
