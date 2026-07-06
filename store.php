@@ -5,7 +5,7 @@ session_set_cookie_params([
 ]);
 
 session_start();
-include("connect.php");
+include("config/connect.php");
 
 if(!isset($_GET['id']) || !is_numeric($_GET['id'])){
 header("Location:products.php");

@@ -4,7 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-include("connect.php");
+include("config/connect.php");
 
 if(!isset($_SESSION['email'])){
     header("Location: login.php");

@@ -1,5 +1,5 @@
 <?php
-include("connect.php");
+include("config/connect.php");
 include("admin_auth.php");
 
 /*==========================================

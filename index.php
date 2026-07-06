@@ -5,7 +5,7 @@ session_set_cookie_params([
 ]);
 
 session_start();
-include("connect.php");
+include("config/connect.php");
 
 /* FEATURED PRODUCTS */
 
