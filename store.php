@@ -1,234 +1,58 @@
-<div class="main">
+<?php
+session_set_cookie_params([
+'httponly'=>true,
+'samesite'=>'Lax'
+]);
 
-<h1 class="title">
+session_start();
+include("connect.php");
 
-Store Profile
-
-</h1>
-
-<?php if(isset($_GET['saved'])){ ?>
-
-<div class="success">
-
-✅ Your store profile has been updated successfully.
-
-</div>
-
-<?php } ?>
-
-<div class="profile-box">
-
-<div class="preview">
-
-<div>
-
-<p style="color:gold;margin-bottom:10px;font-weight:bold;">
-
-Store Logo
-
-</p>
-
-<img
-
-class="logo-preview"
-
-src="<?php
-
-if(!empty($user['shop_logo'])){
-
-echo "images/".htmlspecialchars($user['shop_logo']);
-
-}else{
-
-echo "https://via.placeholder.com/150?text=Logo";
-
+if(!isset($_GET['id']) || !is_numeric($_GET['id'])){
+header("Location:products.php");
+exit();
 }
 
-?>">
+$sellerId=(int)$_GET['id'];
 
-</div>
+$stmt=$conn->prepare("
+SELECT
+id,
+shop_name,
+shop_logo,
+shop_banner,
+shop_description,
+phone,
+address,
+facebook,
+instagram,
+website
+FROM users
+WHERE id=?
+AND role='seller'
+");
 
-<div style="flex:1;">
+$stmt->bind_param("i",$sellerId);
+$stmt->execute();
 
-<p style="color:gold;margin-bottom:10px;font-weight:bold;">
+$store=$stmt->get_result()->fetch_assoc();
 
-Store Banner
-
-</p>
-
-<img
-
-class="banner"
-
-src="<?php
-
-if(!empty($user['shop_banner'])){
-
-echo "images/".htmlspecialchars($user['shop_banner']);
-
-}else{
-
-echo "https://via.placeholder.com/900x250?text=Store+Banner";
-
+if(!$store){
+die("Store not found.");
 }
 
-?>">
-
-</div>
-
-</div>
-
-<form method="POST" enctype="multipart/form-data">
-
-<label>Store Name</label>
-
-<input
-
-type="text"
-
-name="shop_name"
-
-value="<?php echo htmlspecialchars($user['shop_name']); ?>"
-
-required>
-
-<div class="row">
-
-<div>
-
-<label>Upload Logo</label>
-
-<input
-
-type="file"
-
-name="shop_logo"
-
-accept=".jpg,.jpeg,.png,.webp">
-
-</div>
-
-<div>
-
-<label>Upload Banner</label>
-
-<input
-
-type="file"
-
-name="shop_banner"
-
-accept=".jpg,.jpeg,.png,.webp">
-
-</div>
-
-</div>
-
-<label>Store Description</label>
-
-<textarea
-
-name="shop_description"><?php echo htmlspecialchars($user['shop_description']); ?></textarea>
-
-<div class="row">
-
-<div>
-
-<label>Phone Number</label>
-
-<input
-
-type="text"
-
-name="phone"
-
-value="<?php echo htmlspecialchars($user['phone']); ?>">
-
-</div>
-
-<div>
-
-<label>Business Address</label>
-
-<input
-
-type="text"
-
-name="address"
-
-value="<?php echo htmlspecialchars($user['address']); ?>">
-
-</div>
-
-</div>
-
-<div class="row">
-
-<div>
-
-<label>Facebook</label>
-
-<input
-
-type="text"
-
-name="facebook"
-
-placeholder="https://facebook.com/yourpage"
-
-value="<?php echo htmlspecialchars($user['facebook']); ?>">
-
-</div>
-
-<div>
-
-<label>Instagram</label>
-
-<input
-
-type="text"
-
-name="instagram"
-
-placeholder="https://instagram.com/yourpage"
-
-value="<?php echo htmlspecialchars($user['instagram']); ?>">
-
-</div>
-
-</div>
-
-<label>Website</label>
-
-<input
-
-type="text"
-
-name="website"
-
-placeholder="https://www.yourstore.com"
-
-value="<?php echo htmlspecialchars($user['website']); ?>">
-
-<button
-
-type="submit"
-
-name="saveProfile">
-
-Save Store Profile
-
-</button>
-
-</form>
-
-</div>
-
-</div>
-
-</body>
-
-</html>
+$stmt=$conn->prepare("
+SELECT *
+FROM products
+WHERE seller_id=?
+AND status='approved'
+ORDER BY id DESC
+");
+
+$stmt->bind_param("i",$sellerId);
+$stmt->execute();
+
+$products=$stmt->get_result();
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -236,15 +60,9 @@ Save Store Profile
 <head>
 
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 
-<meta name="viewport"
-content="width=device-width, initial-scale=1.0">
-
-<title>
-
-<?php echo htmlspecialchars($store['shop_name']); ?>
-
-</title>
+<title><?php echo htmlspecialchars($store['shop_name']); ?></title>
 
 <style>
 
@@ -260,216 +78,164 @@ background:#0b0b0b;
 color:white;
 }
 
-/* Banner */
+.navbar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:20px 50px;
+background:black;
+border-bottom:1px solid #222;
+}
+
+.logo{
+font-size:30px;
+font-weight:bold;
+color:gold;
+}
+
+.nav-links a{
+color:white;
+text-decoration:none;
+margin-left:20px;
+}
+
+.nav-links a:hover{
+color:gold;
+}
 
 .banner{
-
 width:100%;
 height:320px;
 object-fit:cover;
 display:block;
-
 }
 
-/* Header */
-
-.store-header{
-
+.store-box{
 width:90%;
 margin:auto;
 margin-top:-70px;
+}
 
+.header{
 display:flex;
 align-items:flex-end;
 gap:30px;
-
+flex-wrap:wrap;
 }
 
-.logo{
-
+.store-logo{
 width:170px;
 height:170px;
-
 border-radius:50%;
-border:6px solid gold;
-
-object-fit:cover;
-
+border:5px solid gold;
 background:#111;
-
+object-fit:cover;
 }
 
-/* Store Info */
-
 .info{
-
 flex:1;
-
 }
 
 .info h1{
-
+font-size:42px;
 color:gold;
-font-size:40px;
-margin-bottom:15px;
-
+margin-bottom:10px;
 }
 
 .info p{
-
-line-height:1.8;
+margin:8px 0;
 color:#ccc;
-
+line-height:1.7;
 }
 
-.social{
-
-margin-top:20px;
-
+.links{
+margin-top:15px;
 }
 
-.social a{
-
+.links a{
 display:inline-block;
-
 margin-right:15px;
-
 color:gold;
-
 text-decoration:none;
-
 font-weight:bold;
-
 }
-
-/* Products */
 
 .section-title{
-
 width:90%;
-margin:50px auto 30px;
-
+margin:45px auto 25px;
 font-size:34px;
-
 color:gold;
-
 }
 
 .products{
-
 width:90%;
 margin:auto;
-
 display:grid;
-
-grid-template-columns:
-
-repeat(auto-fit,minmax(280px,1fr));
-
+grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
 gap:25px;
-
-padding-bottom:60px;
-
+padding-bottom:50px;
 }
 
 .card{
-
 background:#111;
-
 border:1px solid #222;
-
 border-radius:15px;
-
 overflow:hidden;
-
 transition:.3s;
-
 }
 
 .card:hover{
-
-transform:translateY(-6px);
-
-box-shadow:0 15px 30px rgba(255,215,0,.15);
-
+transform:translateY(-5px);
+box-shadow:0 10px 20px rgba(255,215,0,.15);
 }
 
 .card img{
-
 width:100%;
-
-height:250px;
-
+height:260px;
 object-fit:cover;
-
 }
 
 .card-body{
-
 padding:20px;
-
 }
 
 .card-body h3{
-
 color:gold;
-
 margin-bottom:10px;
-
 }
 
 .price{
-
 font-size:22px;
-
 font-weight:bold;
-
 margin:15px 0;
-
 }
 
 .stock{
-
-margin-bottom:15px;
-
-color:#bbb;
-
+margin-bottom:18px;
+font-weight:bold;
 }
 
 .btn{
-
 width:100%;
-
 padding:14px;
-
 background:gold;
-
+color:black;
 border:none;
-
 border-radius:8px;
-
 font-weight:bold;
-
 cursor:pointer;
-
 }
 
 .btn:hover{
-
 background:#d4af37;
-
 }
 
 .footer{
-
-text-align:center;
-
-padding:30px;
-
 background:black;
-
+text-align:center;
+padding:30px;
 color:#777;
-
+margin-top:40px;
 }
 
 </style>
@@ -478,122 +244,65 @@ color:#777;
 
 <body>
 
-<img
+<div class="navbar">
 
-class="banner"
+<div class="logo">
+LuxuryVault
+</div>
 
-src="<?php
+<div class="nav-links">
 
-if(!empty($store['shop_banner'])){
+<a href="index.php">Home</a>
+<a href="products.php">Products</a>
 
-echo "images/".htmlspecialchars($store['shop_banner']);
+<?php if(isset($_SESSION['email'])){ ?>
 
-}else{
+<a href="cart.php">Cart</a>
+<a href="wishlist.php">Wishlist</a>
+<a href="logout.php">Logout</a>
 
-echo "https://via.placeholder.com/1600x350?text=LuxuryVault+Store";
+<?php }else{ ?>
 
-}
+<a href="login.php">Login</a>
 
-?>">
+<?php } ?>
 
-<div class="store-header">
+</div>
 
-<img
+</div>
 
-class="logo"
+<img class="banner"
+src="<?php echo !empty($store['shop_banner']) ? "images/".$store['shop_banner'] : "https://via.placeholder.com/1600x350?text=LuxuryVault+Store"; ?>">
 
-src="<?php
+<div class="store-box">
 
-if(!empty($store['shop_logo'])){
+<div class="header">
 
-echo "images/".htmlspecialchars($store['shop_logo']);
-
-}else{
-
-echo "https://via.placeholder.com/200?text=Logo";
-
-}
-
-?>">
+<img class="store-logo"
+src="<?php echo !empty($store['shop_logo']) ? "images/".$store['shop_logo'] : "https://via.placeholder.com/200?text=Store"; ?>">
 
 <div class="info">
 
-<h1>
+<h1><?php echo htmlspecialchars($store['shop_name']); ?></h1>
 
-<?php
+<p><?php echo nl2br(htmlspecialchars($store['shop_description'])); ?></p>
 
-echo htmlspecialchars($store['shop_name']);
+<p>📞 <?php echo htmlspecialchars($store['phone']); ?></p>
 
-?>
+<p>📍 <?php echo htmlspecialchars($store['address']); ?></p>
 
-</h1>
+<div class="links">
 
-<p>
-
-<?php
-
-echo nl2br(
-
-htmlspecialchars($store['shop_description'])
-
-);
-
-?>
-
-</p>
-
-<p>
-
-📞
-
-<?php echo htmlspecialchars($store['phone']); ?>
-
-</p>
-
-<p>
-
-📍
-
-<?php echo htmlspecialchars($store['address']); ?>
-
-</p>
-
-<div class="social">
-
-<?php if(!empty($store['facebook'])){ ?>
-
-<a target="_blank"
-
-href="<?php echo htmlspecialchars($store['facebook']); ?>">
-
-Facebook
-
-</a>
-
+<?php if($store['facebook']!=""){ ?>
+<a target="_blank" href="<?php echo htmlspecialchars($store['facebook']); ?>">Facebook</a>
 <?php } ?>
 
-<?php if(!empty($store['instagram'])){ ?>
-
-<a target="_blank"
-
-href="<?php echo htmlspecialchars($store['instagram']); ?>">
-
-Instagram
-
-</a>
-
+<?php if($store['instagram']!=""){ ?>
+<a target="_blank" href="<?php echo htmlspecialchars($store['instagram']); ?>">Instagram</a>
 <?php } ?>
 
-<?php if(!empty($store['website'])){ ?>
-
-<a target="_blank"
-
-href="<?php echo htmlspecialchars($store['website']); ?>">
-
-Website
-
-</a>
-
+<?php if($store['website']!=""){ ?>
+<a target="_blank" href="<?php echo htmlspecialchars($store['website']); ?>">Website</a>
 <?php } ?>
 
 </div>
@@ -602,58 +311,48 @@ Website
 
 </div>
 
-<h2 class="section-title">
-
-Products
-
-</h2>
+<h2 class="section-title">Products</h2>
 
 <div class="products">
+ <?php
 
-<?php
+if($products->num_rows>0){
 
-if($products->num_rows > 0){
+while($row=$products->fetch_assoc()){
 
-while($row = $products->fetch_assoc()){
+$image=!empty($row['image']) && file_exists("images/".$row['image'])
+? "images/".$row['image']
+: "https://via.placeholder.com/400x300?text=LuxuryVault";
 
 ?>
 
 <div class="card">
 
-<img
-src="images/<?php echo htmlspecialchars($row['image']); ?>">
+<img src="<?php echo htmlspecialchars($image); ?>">
 
 <div class="card-body">
 
-<h3>
+<h3><?php echo htmlspecialchars($row['name']); ?></h3>
 
-<?php echo htmlspecialchars($row['name']); ?>
-
-</h3>
-
-<p>
-
+<p style="color:#999;">
 <?php echo htmlspecialchars($row['category']); ?>
-
 </p>
 
 <div class="price">
-
 TZS <?php echo number_format($row['price']); ?>
-
 </div>
 
 <div class="stock">
 
 <?php
 
-if($row['quantity'] > 0){
+if($row['quantity']>0){
 
 echo "<span style='color:#4CAF50;'>✔ ".$row['quantity']." In Stock</span>";
 
 }else{
 
-echo "<span style='color:red;'>Out Of Stock</span>";
+echo "<span style='color:#ff5252;'>Out Of Stock</span>";
 
 }
 
@@ -661,21 +360,17 @@ echo "<span style='color:red;'>Out Of Stock</span>";
 
 </div>
 
-<p style="color:#bbb;margin-bottom:20px;">
+<p style="color:#bbb;line-height:1.6;margin-bottom:20px;">
 
 <?php
 
-echo htmlspecialchars(
+echo htmlspecialchars(substr($row['description'],0,80));
 
-substr($row['description'],0,80)
+?>
 
-);
-
-?>...
+...
 
 </p>
-
-<?php if($row['quantity']>0){ ?>
 
 <a href="product.php?id=<?php echo (int)$row['id']; ?>">
 
@@ -687,22 +382,6 @@ View Product
 
 </a>
 
-<?php }else{ ?>
-
-<button
-
-class="btn"
-
-disabled
-
-style="background:#666;cursor:not-allowed;">
-
-Out Of Stock
-
-</button>
-
-<?php } ?>
-
 </div>
 
 </div>
@@ -715,13 +394,30 @@ Out Of Stock
 
 ?>
 
-<div style="grid-column:1/-1;text-align:center;padding:80px;">
+<div style="
+grid-column:1/-1;
+background:#111;
+padding:80px;
+border-radius:15px;
+border:1px solid #222;
+text-align:center;
+">
 
-<h2 style="color:#999;">
+<h2 style="color:#999;margin-bottom:20px;">
 
-This store has no approved products yet.
+This seller has not published any products yet.
 
 </h2>
+
+<a href="products.php">
+
+<button class="btn" style="max-width:250px;">
+
+Browse Marketplace
+
+</button>
+
+</a>
 
 </div>
 
@@ -741,4 +437,4 @@ This store has no approved products yet.
 
 </body>
 
-</html>
+</html>   
